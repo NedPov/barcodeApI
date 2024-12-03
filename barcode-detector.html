@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarcodeDetected API</title>
+    <style>
+        video{
+            border: 2px solid black;
+            width: 60%;
+            max-width: 600px;
+        }
+        canvas{
+            display: none;
+        }
+        .output{
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid red;
+            background-color: bisque;
+        }
+        .output p {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Обнаружение разных типов кодов и их содержимое через камеру на тлф</h1>
+    <button id="start-camera">Включить камеру</button>
+    <button id="stop-camera" disabled>Выключить камеру</button><br>
+    <video id="camera" autoplay></video> <!-- autoplay - Сразу воспроизводится-->
+    <canvas id="canvas"></canvas>
+    <div class="output" id="output">
+        <p>Пока не обнаружено не одного кода</p>
+    </div>
+
+
+<script>
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('canvas');
+    const output = document.getElementById('output');
+    const startBtn = document.getElementById('start-camera');
+    const stopBtn = document.getElementById('stop-camera');
+
+
+    let stream = null; //Поток наш
+    let barcodeDetector = null; //Сам баркоддетектор (создали тут, что бы на 53 проверить можем мы его исполльзовать или нет)
+
+
+    if("BarcodeDetector" in window){ //Если API поддерживается
+        const supportedFormats = ['code_128', 'ean-13', 'qr_code', 'upc_a']; // массив эл. которые мы можем распознавать (взяли с документации)
+        barcodeDetector = new BarcodeDetector({formats: supportedFormats}); // Создали баркод (метод API), его значением будет массив с эл. (по умолчанию поддерживаются все соды, мы сделали выборочно, что бы камера не читала например штрих код на печеньках)
+        
+
+    } else{
+        alert("Распознавание кода не поддерживается вашим браузером. Откройте стр в мобильном браузере");
+    }
+
+    async function startCamera() { //f для старта камеры. Камера - потоковая передача данных. Для этого подготовили переменную stream
+        try{
+            // await будет постоянно отдавать картинки(с очень высокой частотой обновления)
+            stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}}); //ожидаем что нам дадут доступ к камере
+            //обращаемся к navigator, в нем есть mediaDevices - св-во которое позволяет получить доступ к медиа устройству => получить доступ к камере({объект который нас интересует}) - ({интересует св-во видео:}) => у видео тоже есть св-во ({video: {facingMode: 'environment'}}) /facingMode: 'environment' - окружающая среда (т.е. не фронталка, а тыльная камера)
+
+            video.srcObject = stream;   //Источник для видео будет Объект => поток stream(и он туда будет хуярить картинки)
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+
+
+        } catch (err){
+            console.error(`Ошибка получения доступа к камере ${err}`);
+        }
+    }
+
+    function stopCamera(){//f для остановки камеры
+        if(stream){ //если сейчас идет поотоковая передача
+            stream.getTracks().forEach(track => track.stop());  //обращаемся к stream. Т.к. сейчас идет передача данных, то у него есть метод getTracks() - отслеживаение потока(какие треки переданы, какие передаются, какие на очереди) => forEach (по всем эл.) => останавливаем все эл.
+
+            video.srcObject = null; //обнуляем источник
+
+            //меняем блок кнопок
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        }
+    }
+
+
+    startBtn.addEventListener('click', startCamera);
+    stopBtn.addEventListener('click', stopCamera);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+</body>
+</html>
